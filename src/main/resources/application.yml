@@ -1,0 +1,30 @@
+
+
+spring:
+  ai:
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        options:
+          model: qwen2.5:0.5b
+      embedding:
+        options:
+          model: qwen2.5:0.5b
+          max-tokens: 2048
+
+    mcp:
+      server:
+        name: my-weather-server
+        version: 1.0.0
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/sdpx?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: root
+    password: 123456
+
+logging:
+  level:
+    root: info
+    org.springframework.web.client: debug
+    org.springframework.retry.support.RetryTemplate: debug
+    org.springframework.web.servlet.resource: debug  # 添加日志级别以排查静态资源问题
