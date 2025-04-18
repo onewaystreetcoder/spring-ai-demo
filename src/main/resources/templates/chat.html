@@ -28,6 +28,14 @@
       display: flex;
       align-items: center;
     }
+    .user-message-container {
+      display: flex;
+      justify-content: flex-end;
+    }
+    .ai-message-container {
+      display: flex;
+      justify-content: flex-start;
+    }
     .avatar {
       width: 40px;
       height: 40px;
@@ -39,13 +47,14 @@
       padding: 10px;
       border-radius: 10px;
       max-width: 70%;
+      margin-left: auto;
     }
     .ai-message {
       background-color: #f6ffed;
       padding: 10px;
       border-radius: 10px;
       max-width: 70%;
-      margin-left: auto;
+      margin-right: auto;
     }
   </style>
 </head>
@@ -60,7 +69,7 @@
               <!-- 对话内容将动态插入到这里 -->
             </div>
             <div style="margin-top: 10px;">
-              <input type="text" id="user-input" class="layui-input" placeholder="请输入您的问题..." style="width: 80%; display: inline-block;">
+              <textarea id="user-input" class="layui-textarea" placeholder="请输入您的问题..." rows="1" style="width: 80%; display: inline-block; resize: none;"></textarea>
               <button id="send-btn" class="layui-btn" style="width: 18%;">发送</button>
             </div>
           </div>
@@ -85,31 +94,34 @@
         // 显示用户消息
         var chatContainer = document.getElementById('chat-container');
         chatContainer.innerHTML += `
-          <div class="message">
-            <img src="/static/img/user.jpeg" class="avatar" alt="User Avatar">
+          <div class="message user-message-container">
             <div class="user-message">${userInput}</div>
+            <img src="/static/img/user.jpeg" class="avatar" alt="User Avatar">
           </div>
         `;
         chatContainer.scrollTop = chatContainer.scrollHeight;
 
         // 清空输入框
         document.getElementById('user-input').value = '';
+        document.getElementById('user-input').rows = 1;
 
-        // 使用AJAX发送用户输入内容到/chat接口
+        // 使用AJAX发送用户输入内容到/chat接口，以表单形式提交
         fetch('/chat', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/x-www-form-urlencoded'
           },
-          body: JSON.stringify({ message: userInput })
+          body: new URLSearchParams({
+            message: userInput
+          })
         })
         .then(response => response.json())
         .then(data => {
           // 显示AI回复
           chatContainer.innerHTML += `
-            <div class="message">
-              <div class="ai-message">${data.generation}</div>
+            <div class="message ai-message-container">
               <img src="/static/img/AI.png" class="avatar" alt="AI Avatar">
+              <div class="ai-message">${data.generation}</div>
             </div>
           `;
           chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -117,6 +129,14 @@
         .catch(error => {
           layer.msg('请求失败，请稍后再试');
         });
+      });
+
+      // 动态调整输入框高度
+      document.getElementById('user-input').addEventListener('input', function() {
+        var textarea = this;
+        textarea.rows = 1; // 重置行数
+        var rows = Math.min(Math.ceil(textarea.scrollHeight / 20), 3); // 最多三行
+        textarea.rows = rows;
       });
     });
   </script>

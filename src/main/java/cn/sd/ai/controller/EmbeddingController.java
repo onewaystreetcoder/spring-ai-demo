@@ -9,9 +9,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
 import org.springframework.web.bind.annotation.PostMapping;
-    import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -22,20 +24,52 @@ public class EmbeddingController {
         this.embeddedService = embeddedService;
     }
 
+
+    @PostMapping("/embedding")
+    @SaCheckPermission("embedding:list")
+    public AjaxResult embedding(@RequestBody EmbeddingDocument reqDoc) {
+        try {
+            List<EmbeddingDocument> documents =embeddedService.search(reqDoc);
+            return AjaxResult.success(documents);
+        } catch (Exception e) {
+            logger.error("list embedding error", e);
+            return AjaxResult.error();
+        }
+    }
+
     @PostMapping("/embedding-add")
     @SaCheckPermission("embedding:add")
-    public AjaxResult add(EmbeddingDocument reqDoc) {
-        Map<String, Object> result = new HashMap<>();
+    public AjaxResult add(@RequestBody EmbeddingDocument reqDoc) {
         try {
-            String uuid = IdUtil.fastUUID();
-            Document doc = new Document(reqDoc.getQuestion(), Map.of(
-                    "docId", uuid,
-                    "schemas", reqDoc.getSchemas()
-            ));
-            embeddedService.addDocument(doc);
+
+            embeddedService.addDocument(reqDoc);
             return AjaxResult.success();
         } catch (Exception e) {
             logger.error("add embedding error", e);
+            return AjaxResult.error();
+        }
+    }
+
+    @PostMapping("/embedding-edit")
+    @SaCheckPermission("embedding:edit")
+    public AjaxResult edit(@RequestBody EmbeddingDocument reqDoc) {
+        try {
+            embeddedService.editDocument(reqDoc);
+            return AjaxResult.success();
+        } catch (Exception e) {
+            logger.error("edit embedding error", e);
+            return AjaxResult.error();
+        }
+    }
+
+    @PostMapping("/embedding-del")
+    @SaCheckPermission("embedding:delete")
+    public AjaxResult delete(@RequestBody EmbeddingDocument reqDoc) {
+        try {
+            embeddedService.deleteDocument(reqDoc);
+            return AjaxResult.success();
+        } catch (Exception e) {
+            logger.error("delete embedding error", e);
             return AjaxResult.error();
         }
     }

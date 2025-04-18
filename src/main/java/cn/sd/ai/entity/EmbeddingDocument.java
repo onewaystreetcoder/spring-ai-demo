@@ -1,15 +1,17 @@
 package cn.sd.ai.entity;
 
 public class EmbeddingDocument {
+    private static final long serialVersionUID = 1L;
+    private String id;
     private String question;
     private String schemas;
 
-    public EmbeddingDocument() {
+    public String getId() {
+        return id;
     }
 
-    public EmbeddingDocument(String question, String schemas) {
-        this.question = question;
-        this.schemas = schemas;
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getQuestion() {

@@ -14,74 +14,50 @@
 </head>
 <body>
 <div class="demoTable">
-    搜索ID：
+    问题：
     <div class="layui-inline">
-        <input class="layui-input" name="id" id="demoReload" autocomplete="off">
+        <input class="layui-input" name="id" id="search-question" autocomplete="off">
     </div>
-    <button class="layui-btn" data-type="reload">搜索</button>
+    表结构：
+    <div class="layui-inline">
+        <input class="layui-input" name="id" id="search-schemas" autocomplete="off">
+    </div>
+    <button class="layui-btn" data-type="reload" id="search">搜索</button>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <button class="layui-btn" id="embedding-add" data-method="setTop">添加嵌入数据</button>
 </div>
 <table class="layui-hide" id="test" lay-filter="test"></table>
 
-<script type="text/html" id="toolbarDemo" th:inline="none">
-    <div class="layui-btn-container">
-        <button class="layui-btn layui-btn-sm" lay-event="getCheckData">获取选中行数据</button>
-        <button class="layui-btn layui-btn-sm" lay-event="getCheckLength">获取选中数目</button>
-        <button class="layui-btn layui-btn-sm" lay-event="isAll">验证是否全选</button>
-    </div>
-</script>
 
 <script type="text/html" id="barDemo" th:inline="none">
     <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
     <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
 </script>
 
+<div id="embedding-div" style="display: none;">
+    <form class="layui-form" action="form.html">
+        <div class="layui-form-item">
+            <label class="layui-form-label">问题</label>
+            <div class="layui-input-block">
+                <input type="text" name="title" lay-verify="title" id="question" autocomplete="off" placeholder="问题" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item layui-form-text">
+            <label class="layui-form-label">表结构</label>
+            <div class="layui-input-block">
+                <textarea placeholder="表结构" class="layui-textarea" id="schemas"></textarea>
+            </div>
+        </div>
+        <input type="hidden" name="id" id="embedding-id">
+    </form>
+
+</div>
+
 <script th:inline="none">
-    layui.use('table', function(){
+
+    layui.use(['table', 'layer'], function(){
         var table = layui.table;
-
-        table.render({
-            elem: '#test'
-            ,url:'/embedding'
-            ,toolbar: '#toolbarDemo' //开启头部工具栏，并为其绑定左侧模板
-            ,defaultToolbar: ['filter', 'exports', 'print', { //自定义头部工具栏右侧图标。如无需自定义，去除该参数即可
-                title: '提示'
-                ,layEvent: 'LAYTABLE_TIPS'
-                ,icon: 'layui-icon-tips'
-            }]
-            ,title: 'AI嵌入数据表'
-            ,cols: [[
-                {type: 'checkbox', fixed: 'left'}
-                ,{field:'id', title:'ID', width:80, fixed: 'left', unresize: true, sort: true}
-                ,{field:'question', title:'问题', width:120, edit: 'text'}
-                ,{field:'schemas', title:'表结构', width:580, edit: 'text', sort: true}
-                ,{fixed: 'right', title:'操作', toolbar: '#barDemo', width:150}
-            ]]
-            ,page: true
-        });
-
-        //头工具栏事件
-        table.on('toolbar(test)', function(obj){
-            var checkStatus = table.checkStatus(obj.config.id);
-            switch(obj.event){
-                case 'getCheckData':
-                    var data = checkStatus.data;
-                    layer.alert(JSON.stringify(data));
-                    break;
-                case 'getCheckLength':
-                    var data = checkStatus.data;
-                    layer.msg('选中了：'+ data.length + ' 个');
-                    break;
-                case 'isAll':
-                    layer.msg(checkStatus.isAll ? '全选': '未全选');
-                    break;
-
-                //自定义头工具栏右侧图标 - 提示
-                case 'LAYTABLE_TIPS':
-                    layer.alert('这是工具栏右侧自定义的一个图标按钮');
-                    break;
-            };
-        });
-
+        var $ = layui.jquery, layer = layui.layer;
         //监听行工具事件
         table.on('tool(test)', function(obj){
             var data = obj.data;
@@ -89,20 +65,185 @@
             if(obj.event === 'del'){
                 layer.confirm('真的删除行么', function(index){
                     obj.del();
-                    layer.close(index);
+                    $.ajax({
+                        url: "/embedding-del",
+                        type: "post",
+                        dataType: "json",
+                        contentType: "application/json",
+                        data: JSON.stringify({
+                            "id": data.id
+                        }),
+                        success: function(data){
+                            layer.close(index);
+                            $("#search").trigger("click");
+                        }
+                    });
                 });
             } else if(obj.event === 'edit'){
-                layer.prompt({
-                    formType: 2
-                    ,value: data.email
-                }, function(value, index){
-                    obj.update({
-                        email: value
-                    });
-                    layer.close(index);
-                });
+                $('#question').val(data.question);
+                $('#schemas').val(data.schemas);
+                $('#embedding-id').val(data.id);
+                edit()
             }
         });
+
+        $('#embedding-add').on('click', function(){
+            add();
+        });
+
+        //触发事件
+        var add = function(){
+            layer.open({
+                type: 1,
+                title: '添加嵌入数据',
+                area: ['450px', '350px'],
+                btnAlign: 'c',
+                shade: 0,
+                id: 'add',
+                maxmin: true,
+                content: $("#embedding-div"),
+                btn: ['取消', '提交'],
+                yes: function(index, layero){ // 绑定“取消”按钮事件
+                    console.log("cancel");
+                    $('#question').val("");
+                    $('#schemas').val("");
+                    $('#embedding-id').val("");
+                    layer.close(index);
+                },
+                btn2: function(index, layero){ // 绑定“提交”按钮事件
+                    console.log("submit");
+                    // 请求保存表单数据
+                    $.ajax({
+                        url: "/embedding-add",
+                        type: "post",
+                        dataType: "json",
+                        contentType: "application/json",
+                        data: JSON.stringify({
+                            "question": $('#question').val(),
+                            "schemas": $('#schemas').val(),
+                        }),
+                        success: function(data){
+                            layer.close(index);
+                            $("#search").trigger("click");
+                        }
+                    });
+                },
+                zIndex: layer.zIndex, // 保持选中窗口置顶
+                success: function(layero, index){
+                    layer.setTop(layero);
+                    layer.escIndex = layer.escIndex || [];
+                    layer.escIndex.unshift(index);
+                    layero.on('mousedown', function(){
+                        var _index = layer.escIndex.indexOf(index);
+                        if(_index !== -1){
+                            layer.escIndex.splice(_index, 1);
+                        }
+                        layer.escIndex.unshift(index);
+                    });
+                },
+                end: function(){
+                    if(typeof layer.escIndex === 'object'){
+                        layer.escIndex.splice(0, 1);
+                    }
+                }
+            });
+        };
+
+        var edit = function(){
+            layer.open({
+                type: 1,
+                title: '修改嵌入数据',
+                area: ['450px', '350px'],
+                btnAlign: 'c',
+                id: 'edit',
+                shade: 0,
+                maxmin: true,
+                content: $("#embedding-div"),
+                btn: ['取消', '提交'],
+                yes: function(index, layero){ // 绑定“取消”按钮事件
+                    console.log("cancel");
+                    $('#question').val("");
+                    $('#schemas').val("");
+                    $('#embedding-id').val("");
+                    layer.close(index);
+                },
+                btn2: function(index, layero){ // 绑定“提交”按钮事件
+                    console.log("submit");
+                    // 请求保存表单数据
+                    $.ajax({
+                        url: "/embedding-edit",
+                        type: "post",
+                        dataType: "json",
+                        contentType: "application/json",
+                        data: JSON.stringify({
+                            "question": $('#question').val(),
+                            "schemas": $('#schemas').val(),
+                            "id": $('#embedding-id').val(),
+                        }),
+                        success: function(data){
+                            layer.close(index);
+                            $("#search").trigger("click");
+                        }
+                    });
+                },
+                zIndex: layer.zIndex, // 保持选中窗口置顶
+                success: function(layero, index){
+                    layer.setTop(layero);
+                    layer.escIndex = layer.escIndex || [];
+                    layer.escIndex.unshift(index);
+                    layero.on('mousedown', function(){
+                        var _index = layer.escIndex.indexOf(index);
+                        if(_index !== -1){
+                            layer.escIndex.splice(_index, 1);
+                        }
+                        layer.escIndex.unshift(index);
+                    });
+                },
+                end: function(){
+                    if(typeof layer.escIndex === 'object'){
+                        layer.escIndex.splice(0, 1);
+                    }
+                }
+            });
+        };
+
+
+
+        renderTable = function (data){
+            table.render({
+                elem: '#test',
+                toolbar: '#toolbarDemo',
+                title: 'AI嵌入数据表',
+                data: data,
+                cols: [[
+                    {type: 'checkbox', fixed: 'left'},
+                    {field:'id', title:'ID', width:80, fixed: 'left', unresize: true, sort: true},
+                    {field:'question', title:'问题', width:250,edit: 'text'},
+                    {field:'schemas', title:'表结构', width:680, edit: 'text', sort: true},
+                    {fixed: 'right', title:'操作', toolbar: '#barDemo', width:150}
+                ]],
+                page: true
+            })
+        };
+        var loadEmbedding = function(){
+            $.ajax({
+                url: "/embedding",
+                type: "post",
+                dataType: "json",
+                contentType: "application/json",
+                data: JSON.stringify({
+                    "question": $('#search-question').val(),
+                    "schemas": $('#search-schemas').val(),
+                }),
+                success: function(data){
+                    renderTable(data.data);
+                }
+            });
+        };
+        $("#search").click('click', function (){
+            loadEmbedding();
+        });
+        $("#search").trigger("click");
     });
 </script>
 
