@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+  <meta name="renderer" content="webkit">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta http-equiv="Cache-Control" content="no-transform"/>
+  <meta name="referrer" content="no-referrer" />
+  <meta name="referrer" content="never">
+  <meta name="referrer" content="same-origin" />
+  <title>AI问数</title>
+  <!--公共模块-->
+  <div th:replace="~{layout}"></div>
+  <style id="layuimini-bg-color">
+  </style>
+  <style>
+    /* 美化对话框样式 */
+    .chat-container {
+      height: 400px;
+      overflow-y: auto;
+      border: 1px solid #eee;
+      padding: 10px;
+      background-color: #f9f9f9;
+    }
+    .message {
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+    }
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+    .user-message {
+      background-color: #e6f7ff;
+      padding: 10px;
+      border-radius: 10px;
+      max-width: 70%;
+    }
+    .ai-message {
+      background-color: #f6ffed;
+      padding: 10px;
+      border-radius: 10px;
+      max-width: 70%;
+      margin-left: auto;
+    }
+  </style>
+</head>
+<body>
+  <!-- 对话框容器 -->
+  <div class="layui-container" style="margin-top: 5px;">
+    <div class="layui-row layui-col-space15">
+      <div class="layui-col-md12">
+        <div class="layui-card">
+          <div class="layui-card-body">
+            <div id="chat-container" class="chat-container">
+              <!-- 对话内容将动态插入到这里 -->
+            </div>
+            <div style="margin-top: 10px;">
+              <input type="text" id="user-input" class="layui-input" placeholder="请输入您的问题..." style="width: 80%; display: inline-block;">
+              <button id="send-btn" class="layui-btn" style="width: 18%;">发送</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 初始化 layui
+    layui.use(['layer'], function() {
+      var layer = layui.layer;
+
+      // 发送按钮点击事件
+      document.getElementById('send-btn').addEventListener('click', function() {
+        var userInput = document.getElementById('user-input').value;
+        if (userInput.trim() === '') {
+          layer.msg('请输入内容');
+          return;
+        }
+
+        // 显示用户消息
+        var chatContainer = document.getElementById('chat-container');
+        chatContainer.innerHTML += `
+          <div class="message">
+            <img src="/static/img/user.jpeg" class="avatar" alt="User Avatar">
+            <div class="user-message">${userInput}</div>
+          </div>
+        `;
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        // 清空输入框
+        document.getElementById('user-input').value = '';
+
+        // 使用AJAX发送用户输入内容到/chat接口
+        fetch('/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ message: userInput })
+        })
+        .then(response => response.json())
+        .then(data => {
+          // 显示AI回复
+          chatContainer.innerHTML += `
+            <div class="message">
+              <div class="ai-message">${data.generation}</div>
+              <img src="/static/img/AI.png" class="avatar" alt="AI Avatar">
+            </div>
+          `;
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+        })
+        .catch(error => {
+          layer.msg('请求失败，请稍后再试');
+        });
+      });
+    });
+  </script>
+</body>
+</html>
