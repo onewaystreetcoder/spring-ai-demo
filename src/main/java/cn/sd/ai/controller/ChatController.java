@@ -3,6 +3,8 @@ package cn.sd.ai.controller;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.sd.ai.service.EmbeddingService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
@@ -26,6 +28,7 @@ import java.util.Map;
 
 @Controller
 public class ChatController {
+    public static final Logger logger = LoggerFactory.getLogger(EmbeddingController.class);
     private final OllamaChatModel chatModel;
     private final OllamaApi ollamaApi;
     private final EmbeddingService embeddingService;
@@ -79,27 +82,39 @@ public class ChatController {
 
     @PostMapping("/tool_chat3")
     @ResponseBody
-    public Map<String,String> toolChat3(@RequestParam(value = "message", defaultValue = "Tell me a joke") String message) {
-        SystemMessage systemMessage = new SystemMessage("You are a helpful assistant.");
+    public Map<String,String> toolChat3(@RequestParam(value = "message", defaultValue = "Tell me a joke") String message,
+                                        @RequestParam(value = "usingKnowledge", defaultValue = "false") String usingKnowledge,
+                                        @RequestParam(value = "score", defaultValue = "0.5") double score
+                                        ) {
+        String systemMessageStr = "你是一位公司数据库专家，对公司数据表很熟悉，能够快速准确的根据问题写出对应SQL，并调用工具getSqlResultTool获取结果,将结果整理整markdown格式展示";
+
+        if ("true".equals(usingKnowledge)) {
+            List<Document> documents = embeddingService.searchDocument(message);
+            if (CollUtil.isNotEmpty(documents)) {
+                Document document = documents.get(0);
+                String schemas = (String)document.getMetadata().get("schemas");
+                if (StrUtil.isNotEmpty(schemas) && null != document.getScore() && document.getScore() > score){
+                    //将schemas添加到messages中时不调用工具，不知道为啥
+                    AssistantMessage assistantMessage = new AssistantMessage(schemas);
+//                messages.add(assistantMessage);
+                    systemMessageStr = systemMessageStr + "\n\n" + schemas;
+                }
+            }
+        }
+
+
+        SystemMessage systemMessage = new SystemMessage(systemMessageStr);
         UserMessage userMessage = new UserMessage(message);
         List<Message> messages = new ArrayList<>();
         messages.add(systemMessage);
         messages.add(userMessage);
 
-
-        List<Document> documents = embeddingService.searchDocument(message);
-        if (CollUtil.isNotEmpty(documents)) {
-            Document document = documents.get(0);
-            String schemas = (String)document.getMetadata().get("schemas");
-            if (StrUtil.isNotEmpty(schemas)) {
-                AssistantMessage assistantMessage = new AssistantMessage(schemas);
-                messages.add(assistantMessage);
-            }
-        }
-
         Prompt prompt = new Prompt(messages, OllamaOptions.builder().toolNames("getSqlResultTool").build());
 
         ChatResponse response = this.chatModel.call(prompt);
-        return Map.of("generation", response.getResult().getOutput().getText());
+        String text = response.getResult().getOutput().getText();
+        logger.info("toolChat3 response: {}", text);
+
+        return Map.of("generation", text);
     }
 }

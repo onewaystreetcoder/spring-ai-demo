@@ -39,6 +39,14 @@ public class PageController {
         return "login";
     }
 
+    @GetMapping("/chat_tools")
+    public String chatTools() {
+        if (StpUtil.isLogin()) {
+            return "chat_tools";
+        }
+        return "login";
+    }
+
     @GetMapping("/embedding")
     public String embedding() {
         if (StpUtil.isLogin()) {

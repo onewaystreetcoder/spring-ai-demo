@@ -32,6 +32,8 @@ spring:
   thymeleaf:
     cache: false
 
+initVectorsData: false
+
 
 sa-token:
   # token 名称 (同时也是 cookie 名称)

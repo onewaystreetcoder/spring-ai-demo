@@ -52,7 +52,7 @@ public class DbInvokeService {
 
     @Tool(description = "Execute SQL to return query results")
     public String getSqlResultTool(String sql) {
-
+        logger.info("sql:{}", sql);
         Map<String, Object> sqlResult = getSqlResult(sql);
         String s = JSONUtil.toJsonStr(sqlResult);
         return s;

@@ -57,6 +57,8 @@
       margin-right: auto;
     }
   </style>
+  <!-- 引入 Markdown 渲染库 -->
+  <script th:src="@{/static/js/marked.min.js}"></script>
 </head>
 <body>
   <!-- 对话框容器 -->
@@ -68,9 +70,18 @@
             <div id="chat-container" class="chat-container">
               <!-- 对话内容将动态插入到这里 -->
             </div>
-            <div style="margin-top: 10px; display: flex; align-items: flex-end;">
-              <textarea id="user-input" class="layui-textarea" placeholder="请输入您的问题..." rows="1" style="width: 80%; display: inline-block; resize: none; margin-right: 10px;"></textarea>
-              <button id="send-btn" class="layui-btn" style="width: 18%;">发送</button>
+            <div style="margin-top: 10px; position: relative;">
+              <div style="display: flex; align-items: flex-end;">
+                <textarea id="user-input" class="layui-textarea" placeholder="请输入您的问题..." rows="1" style="width: 80%; resize: none;"></textarea>
+                <button id="send-btn" class="layui-btn" style="width: 18%; margin-left: 5px;">发送</button>
+              </div>
+              <!-- 新增复选框和分数输入框 -->
+              <div style="position: absolute; bottom: 5px; left: 0; margin-top: 5px;">
+                <label for="checkbox-option">使用知识库</label>
+                <input type="checkbox" id="checkbox-option" style="margin-right: 5px;">
+                <label for="checkbox-option">命中分值(0-1)"</label>
+                <input type="number" id="score-input" min="0" max="1" step="0.01" placeholder="分值" style="width: 60px; margin-left: 10px;">
+              </div>
             </div>
           </div>
         </div>
@@ -84,7 +95,17 @@
       var layer = layui.layer;
 
       // 发送按钮点击事件
-      document.getElementById('send-btn').addEventListener('click', function() {
+      document.getElementById('send-btn').addEventListener('click', sendMessage);
+
+      // 添加回车发送事件
+      document.getElementById('user-input').addEventListener('keydown', function(event) {
+        if (event.key === 'Enter' && !event.shiftKey) { // 按下回车且未按住Shift键
+          event.preventDefault(); // 阻止默认换行行为
+          sendMessage();
+        }
+      });
+
+      function sendMessage() {
         var userInput = document.getElementById('user-input').value;
         if (userInput.trim() === '') {
           layer.msg('请输入内容');
@@ -105,31 +126,59 @@
         document.getElementById('user-input').value = '';
         document.getElementById('user-input').rows = 1;
 
+        // 显示Loading提示
+        var loadingIndex = layer.msg('正在思考...', {
+          icon: 16,
+          shade: 0.3,
+          time: 0 // 不自动关闭
+        });
+
+        // 获取复选框和分数输入框的值
+        var checkboxValue = document.getElementById('checkbox-option').checked;
+        var scoreValue = parseFloat(document.getElementById('score-input').value) || 0;
+
+        // 如果使用知识库且分值为空，则赋予默认值0.5
+        if (checkboxValue && isNaN(scoreValue)) {
+          document.getElementById('score-input').value = scoreValue = 0.5;
+        }
+
         // 使用AJAX发送用户输入内容到/chat接口，以表单形式提交
-        fetch('/chat', {
+        fetch('/tool_chat3', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
           },
           body: new URLSearchParams({
-            message: userInput
+            message: userInput,
+            usingKnowledge: checkboxValue,
+            score: scoreValue
           })
         })
         .then(response => response.json())
         .then(data => {
-          // 显示AI回复
-          chatContainer.innerHTML += `
-            <div class="message ai-message-container">
-              <img src="/static/img/AI.png" class="avatar" alt="AI Avatar">
-              <div class="ai-message">${data.generation}</div>
-            </div>
+          // 关闭Loading提示
+          layer.close(loadingIndex);
+
+          // 使用 marked 解析 Markdown 内容
+          var aiMessage = marked.parse(data.generation);
+          // 创建一个新的 div 元素来容纳 AI 回复
+          var aiMessageElement = document.createElement('div');
+          aiMessageElement.className = 'message ai-message-container';
+          aiMessageElement.innerHTML = `
+            <img src="/static/img/AI.png" class="avatar" alt="AI Avatar">
+            <div class="ai-message">${aiMessage}</div>
           `;
+
+          // 将 AI 回复添加到聊天容器中
+          chatContainer.appendChild(aiMessageElement);
           chatContainer.scrollTop = chatContainer.scrollHeight;
         })
         .catch(error => {
+          // 关闭Loading提示
+          layer.close(loadingIndex);
           layer.msg('请求失败，请稍后再试');
         });
-      });
+      }
 
       // 动态调整输入框高度
       document.getElementById('user-input').addEventListener('input', function() {
