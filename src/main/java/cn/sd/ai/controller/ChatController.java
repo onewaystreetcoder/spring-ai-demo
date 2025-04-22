@@ -16,6 +16,7 @@ import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.api.OllamaApi;
 import org.springframework.ai.ollama.api.OllamaOptions;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -32,6 +33,9 @@ public class ChatController {
     private final OllamaChatModel chatModel;
     private final OllamaApi ollamaApi;
     private final EmbeddingService embeddingService;
+    @Value("${systemPrompt}")
+    private String systemPrompt_;
+
     @Autowired
     public ChatController(OllamaChatModel chatModel, OllamaApi ollamaApi, EmbeddingService embeddingService) {
         this.chatModel = chatModel;
@@ -73,11 +77,52 @@ public class ChatController {
                         OllamaApi.Message.builder(OllamaApi.Message.Role.USER)
                                 .content(message).build()
                         ))
-                .tools(List.of(new OllamaApi.ChatRequest.Tool(new OllamaApi.ChatRequest.Tool.Function("Execute SQL to return query results", "getSqlResultTool", "{\"sql\": \"string\"}"))))
+                .tools(List.of(new OllamaApi.ChatRequest.Tool(new OllamaApi.ChatRequest.Tool.Function("Execute SQL to return query results", "getSqlResult", "{\"sql\": \"string\"}"))))
                 .build();
         OllamaApi.ChatResponse response = ollamaApi.chat(ollamaRequest);
 
         return Map.of("generation", response.message().content());
+    }
+
+    @PostMapping("/tool_chat4")
+    @ResponseBody
+    public Map<String,String> toolChat4(@RequestParam(value = "message", defaultValue = "Tell me a joke") String message,
+                                        @RequestParam(value = "usingKnowledge", defaultValue = "false") String usingKnowledge,
+                                        @RequestParam(value = "score", defaultValue = "0.5") double score,
+                                        @RequestParam(value = "systemPrompt", defaultValue = "") String systemPrompt
+                                        ) {
+        if (StrUtil.isEmpty(systemPrompt)) {
+            systemPrompt =  this.systemPrompt_;
+        }
+        if ("true".equals(usingKnowledge)) {
+            List<Document> documents = embeddingService.searchDocument(message);
+            if (CollUtil.isNotEmpty(documents)) {
+                Document document = documents.get(0);
+                String schemas = (String)document.getMetadata().get("schemas");
+                if (StrUtil.isNotEmpty(schemas) && null != document.getScore() && document.getScore() > score){
+                    //将schemas添加到messages中时不调用工具，不知道为啥
+                    AssistantMessage assistantMessage = new AssistantMessage(schemas);
+//                messages.add(assistantMessage);
+//                    systemPrompt = systemPrompt + "\n\n" + schemas;
+                    systemPrompt = StrUtil.format(systemPrompt, schemas);
+                }
+            }
+        }
+
+
+        SystemMessage systemMessage = new SystemMessage(systemPrompt);
+        UserMessage userMessage = new UserMessage(message);
+        List<Message> messages = new ArrayList<>();
+        messages.add(systemMessage);
+        messages.add(userMessage);
+
+        Prompt prompt = new Prompt(messages, OllamaOptions.builder().toolNames("getSqlResult").build());
+
+        ChatResponse response = this.chatModel.call(prompt);
+        String text = response.getResult().getOutput().getText();
+        logger.info("toolChat3 response: {}", text);
+
+        return Map.of("generation", StrUtil.removeSuffix(StrUtil.removePrefix(text,"\""), "\""));
     }
 
     @PostMapping("/tool_chat3")
@@ -85,8 +130,8 @@ public class ChatController {
     public Map<String,String> toolChat3(@RequestParam(value = "message", defaultValue = "Tell me a joke") String message,
                                         @RequestParam(value = "usingKnowledge", defaultValue = "false") String usingKnowledge,
                                         @RequestParam(value = "score", defaultValue = "0.5") double score
-                                        ) {
-        String systemMessageStr = "你是一位公司数据库专家，对公司数据表很熟悉，能够快速准确的根据问题写出对应SQL，并调用工具getSqlResultTool获取结果,将结果整理整markdown格式展示";
+    ) {
+        String systemMessageStr = "你是一位公司数据库专家，对公司数据表很熟悉，能够快速准确的根据问题写出对应SQL,要求所生成的SQL表名、字段要在给出的表结构中，并调用工具getSqlResultTool获取结果,将结果整理整markdown格式展示";
 
         if ("true".equals(usingKnowledge)) {
             List<Document> documents = embeddingService.searchDocument(message);
@@ -109,12 +154,12 @@ public class ChatController {
         messages.add(systemMessage);
         messages.add(userMessage);
 
-        Prompt prompt = new Prompt(messages, OllamaOptions.builder().toolNames("getSqlResultTool").build());
+        Prompt prompt = new Prompt(messages, OllamaOptions.builder().toolNames("getSqlResult").build());
 
         ChatResponse response = this.chatModel.call(prompt);
         String text = response.getResult().getOutput().getText();
         logger.info("toolChat3 response: {}", text);
 
-        return Map.of("generation", text);
+        return Map.of("generation", StrUtil.removeSuffix(StrUtil.removePrefix(text,"\""), "\""));
     }
 }

@@ -3,6 +3,7 @@
 spring:
   main:
     allow-bean-definition-overriding: true
+    banner-mode: off
   ai:
     ollama:
       base-url: http://localhost:11434
@@ -33,7 +34,28 @@ spring:
     cache: false
 
 initVectorsData: false
+systemPrompt: |
+  You are a professional SQL development assistant and need to write accurate and efficient SQL queries based on the provided database table structure and specific questions. Please follow the following steps for analysis and generation.：
+  1. Table structure analysis
+     Read the following table structure carefully and pay attention to the field comments and associations：
+  {}
+  2. 查询需求解析
+  3. Writing Requirements
+     Please construct the SQL in the following order:
+     (1) Identify the main table and associated tables involved.
+     (2) Determine the appropriate JOIN type and connection conditions.
+     (3) Parse the time range, status filtering, and other constraints in the WHERE condition.
+     (4) Select the correct aggregation function and grouping conditions.
+     (5) Design clear column aliases and result sorting.
+     (6) invoke getSqlResult tool to obtain the results.
 
+  4. Please pay special attention to the following points:
+     (1) Prefer using EXISTS over IN subqueries.
+     (2) Add table name prefixes to associated fields to avoid ambiguity.
+     (3) Format the SQL to improve readability.
+     (4) 使用中文输出解析，不要使用英文输出
+
+  Please finally generate the executable complete SQL statement
 
 sa-token:
   # token 名称 (同时也是 cookie 名称)
@@ -49,13 +71,14 @@ sa-token:
   # token 风格（默认可取值：uuid、simple-uuid、random-32、random-64、random-128、tik）
   token-style: uuid
   # 是否输出操作日志
-  is-log: true
+  is-log: false
   # jwt 秘钥
   jwt-secret-key: JfdDSgfCmPsDfmsAaQwnXk
 
 logging:
   level:
-    root: info
+    root: warn
     org.springframework.web.client: debug
+    cn.sd.ai: debug
     org.springframework.retry.support.RetryTemplate: debug
-    org.springframework.web.servlet.resource: debug  # 添加日志级别以排查静态资源问题
+    org.springframework.web.servlet.resource: info  # 添加日志级别以排查静态资源问题

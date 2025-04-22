@@ -6,10 +6,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 @Controller
 public class PageController {
-
+    private static final boolean ANONYMOUS_ACCESS = false;
     @GetMapping({ "/login", "/"})
     public String loginIndex() {
-        if (StpUtil.isLogin()) {
+        if (ANONYMOUS_ACCESS || StpUtil.isLogin()) {
             return "home";
         }
         return "login";
@@ -17,7 +17,7 @@ public class PageController {
 
     @GetMapping({"home"})
     public String home() {
-        if (StpUtil.isLogin()) {
+        if (ANONYMOUS_ACCESS || StpUtil.isLogin()) {
             return "home";
         }
         return "login";
@@ -25,7 +25,7 @@ public class PageController {
 
     @GetMapping("/main")
     public String indexHome() {
-        if (StpUtil.isLogin()) {
+        if (ANONYMOUS_ACCESS || StpUtil.isLogin()) {
             return "main";
         }
         return "login";
@@ -33,7 +33,7 @@ public class PageController {
 
     @GetMapping("/chat")
     public String chat() {
-        if (StpUtil.isLogin()) {
+        if (ANONYMOUS_ACCESS || StpUtil.isLogin()) {
             return "chat";
         }
         return "login";
@@ -41,7 +41,7 @@ public class PageController {
 
     @GetMapping("/chat_tools")
     public String chatTools() {
-        if (StpUtil.isLogin()) {
+        if (ANONYMOUS_ACCESS || StpUtil.isLogin()) {
             return "chat_tools";
         }
         return "login";
@@ -49,7 +49,7 @@ public class PageController {
 
     @GetMapping("/embedding")
     public String embedding() {
-        if (StpUtil.isLogin()) {
+        if (ANONYMOUS_ACCESS || StpUtil.isLogin()) {
             return "embedding";
         }
         return "login";

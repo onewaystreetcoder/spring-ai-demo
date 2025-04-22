@@ -56,9 +56,48 @@
       max-width: 70%;
       margin-right: auto;
     }
+    /* 新增样式：模仿 chat.deepseek.com 的界面风格 */
+    .ai-message {
+      border-left: 3px solid #007bff; /* 添加左侧边框 */
+      padding-left: 15px; /* 增加内边距 */
+      font-size: 14px; /* 调整字体大小 */
+      line-height: 1.6; /* 调整行高 */
+    }
+    .ai-message pre code {
+      background-color: #f8f8f8; /* 代码块背景色 */
+      border-radius: 4px; /* 圆角 */
+      padding: 8px; /* 内边距 */
+      overflow-x: auto; /* 横向滚动 */
+    }
+    .ai-message table {
+      border-collapse: collapse; /* 表格边框合并 */
+      width: 100%; /* 表格宽度 */
+      margin-top: 10px; /* 上边距 */
+    }
+    .ai-message table th, .ai-message table td {
+      border: 1px solid #ddd; /* 单元格边框 */
+      padding: 8px; /* 内边距 */
+      text-align: left; /* 文本左对齐 */
+    }
+    .ai-message table th {
+      background-color: #f2f2f2; /* 表头背景色 */
+    }
+    .copy-btn {
+      background-color: #007bff; /* 复制按钮背景色 */
+      color: white; /* 字体颜色 */
+      border: none; /* 去掉边框 */
+      padding: 5px 10px; /* 内边距 */
+      border-radius: 4px; /* 圆角 */
+      cursor: pointer; /* 鼠标悬停效果 */
+      margin-bottom: 5px; /* 下边距 */
+    }
+    .copy-btn:hover {
+      background-color: #0056b3; /* 鼠标悬停时背景色 */
+    }
   </style>
   <!-- 引入 Markdown 渲染库 -->
   <script th:src="@{/static/js/marked.min.js}"></script>
+  <script th:src="@{/static/js/clipboard.min.js}"></script>
 </head>
 <body>
   <!-- 对话框容器 -->
@@ -78,9 +117,9 @@
               <!-- 新增复选框和分数输入框 -->
               <div style="position: absolute; bottom: 5px; left: 0; margin-top: 5px;">
                 <label for="checkbox-option">使用知识库</label>
-                <input type="checkbox" id="checkbox-option" style="margin-right: 5px;">
+                <input type="checkbox" id="checkbox-option" checked="checked" style="margin-right: 5px;">
                 <label for="checkbox-option">命中分值(0-1)"</label>
-                <input type="number" id="score-input" min="0" max="1" step="0.01" placeholder="分值" style="width: 60px; margin-left: 10px;">
+                <input type="number" id="score-input" min="0" max="1" step="0.01" value="0.3" placeholder="分值" style="width: 60px; margin-left: 10px;">
               </div>
             </div>
           </div>
@@ -159,17 +198,64 @@
           // 关闭Loading提示
           layer.close(loadingIndex);
 
+          // 处理接口返回的 Markdown 数据，将 \n 替换为 <br>
+          var processedMarkdown = data.generation.replace(/\\n/g, '\n');
+
           // 使用 marked 解析 Markdown 内容
-          var aiMessage = marked.parse(data.generation);
-          // 创建一个新的 div 元素来容纳 AI 回复
+          var aiMessage = marked.parse(processedMarkdown);
+
+          // 处理代码块和表格部分，添加复制按钮
+          var tempDiv = document.createElement('div');
+          tempDiv.innerHTML = aiMessage;
+
+          // 处理代码块
+          var codeBlocks = tempDiv.querySelectorAll('pre > code');
+          codeBlocks.forEach(function(codeBlock) {
+            // 修复代码块内容获取逻辑
+            var codeContent = codeBlock.innerText || codeBlock.textContent;
+            if (!codeContent) {
+              console.error('代码块内容为空，无法复制');
+              return;
+            }
+
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'copy-btn';
+            copyBtn.textContent = '复制';
+            copyBtn.title = '复制代码';
+            copyBtn.setAttribute('data-clipboard-text', codeContent);
+            new ClipboardJS(copyBtn);
+            copyBtn.addEventListener('success', function() {
+              layer.msg('复制成功');
+            });
+            copyBtn.addEventListener('error', function() {
+              layer.msg('复制失败，请检查浏览器权限');
+            });
+            codeBlock.parentNode.insertBefore(copyBtn, codeBlock);
+          });
+
+
+
+
+          // 处理表格
+          var tables = tempDiv.querySelectorAll('table');
+          tables.forEach(function(table) {
+            var tableText = table.innerText.replace(/\n/g, '<br>');
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'copy-btn';
+            copyBtn.textContent = '复制';
+            copyBtn.title = '复制表格';
+            copyBtn.setAttribute('data-clipboard-text', tableText);
+            table.parentNode.insertBefore(copyBtn, table);
+          });
+
+          // 将处理后的 HTML 插入到聊天容器中
           var aiMessageElement = document.createElement('div');
           aiMessageElement.className = 'message ai-message-container';
           aiMessageElement.innerHTML = `
             <img src="/static/img/AI.png" class="avatar" alt="AI Avatar">
-            <div class="ai-message">${aiMessage}</div>
+            <div class="ai-message">${tempDiv.innerHTML}</div>
           `;
 
-          // 将 AI 回复添加到聊天容器中
           chatContainer.appendChild(aiMessageElement);
           chatContainer.scrollTop = chatContainer.scrollHeight;
         })
@@ -179,6 +265,21 @@
           layer.msg('请求失败，请稍后再试');
         });
       }
+
+      // 使用jquery动态绑定复制按钮click事件
+      $('#chat-container').on('click', ".copy-btn", function() {
+        console.log('复制按钮被点击')
+        var text = $(this).data('clipboard-text');
+        if (text) {
+          navigator.clipboard.writeText(text).then(function() {
+            layer.msg('复制成功');
+          }).catch(function() {
+            layer.msg('复制失败，请检查浏览器权限');
+          });
+        } else {
+          layer.msg('复制失败，请检查代码块内容');
+        }
+      });
 
       // 动态调整输入框高度
       document.getElementById('user-input').addEventListener('input', function() {
