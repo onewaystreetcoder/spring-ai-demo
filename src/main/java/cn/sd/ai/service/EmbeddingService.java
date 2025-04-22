@@ -4,7 +4,7 @@ import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.sd.ai.entity.EmbeddingDocument;
 import org.springframework.ai.document.Document;
-import org.springframework.ai.ollama.OllamaEmbeddingModel;
+import org.springframework.ai.openai.OpenAiEmbeddingModel;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -17,16 +17,23 @@ import java.util.Map;
 
 @Service
 public class EmbeddingService {
-    private final OllamaEmbeddingModel embeddingModel;
+//    private final OllamaEmbeddingModel embeddingModel;
+    private final OpenAiEmbeddingModel embeddingModel;
     private final VectorStore vectorStore;
     private final JdbcTemplate jdbcTemplate;
 
-    public EmbeddingService(OllamaEmbeddingModel embeddingModel, VectorStore vectorStore, JdbcTemplate jdbcTemplate) {
+//    public EmbeddingService(OllamaEmbeddingModel embeddingModel, VectorStore vectorStore, JdbcTemplate jdbcTemplate) {
+//        this.embeddingModel = embeddingModel;
+//        this.vectorStore = vectorStore;
+//        this.jdbcTemplate = jdbcTemplate;
+//    }
+
+
+    public EmbeddingService(OpenAiEmbeddingModel embeddingModel, VectorStore vectorStore, JdbcTemplate jdbcTemplate) {
         this.embeddingModel = embeddingModel;
         this.vectorStore = vectorStore;
         this.jdbcTemplate = jdbcTemplate;
     }
-
 
     public List<EmbeddingDocument> search(EmbeddingDocument reqDoc) {
         String sql = "select * from schemas_embedding where 1 = 1 ";

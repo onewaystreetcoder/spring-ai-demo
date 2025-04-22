@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Markdown解析器</title>
+    <!-- 引入GitHub风格的Markdown样式 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
+    <style>
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .editor-area {
+            display: flex;
+            gap: 20px;
+        }
+        #input {
+            width: 45%;
+            height: 500px;
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+        #output {
+            width: 45%;
+            padding: 20px;
+            border: 1px solid #ddd;
+            background: white;
+            overflow: auto;
+        }
+        button {
+            padding: 10px 20px;
+            background: #0366d6;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        button:hover {
+            background: #005cc5;
+        }
+        .markdown-body table {
+            width: 100%;
+            overflow: auto;
+            border-collapse: collapse;
+        }
+        .markdown-body td,
+        .markdown-body th {
+            padding: 6px 13px;
+            border: 1px solid #dfe2e5;
+        }
+        .markdown-body tr {
+            background-color: #fff;
+            border-top: 1px solid #c6cbd1;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <button onclick="renderMarkdown()">解析并展示</button>
+    <div class="editor-area">
+            <textarea id="input" placeholder="请输入Markdown内容">
+| id | title | content | type | public_user_id | public_user_name | public_org_id | public_org_name | public_time | cancel_time | status | create_time | create_user | update_time | update_user |
+|----|------|--------|-----|-----------------|-------------------|---------------|---------------|------------|----------|-------|------------|-------------|--------------|
+| 1 | 沙拉 | > 初春的甜味 | 1 | 2009854375 | 张三 | 1 | 北京大学 | 2018-06-07 | 2022-12-01 | 0 | 2018-06-07 | - | - | - |
+| 2 | 大虾 | 夏日的清凉 | 2 | 4578983762 | 李四 | 1 | 北京大学 | 2018-06-07 | 2022-12-01 | 0 | 2018-06-07 | - | - | - |
+| 3 | 热菜 | 花味的盛宴 | 3 | 9456783456 | 周五 | 1 | 北京大学 | 2018-06-07 | 2022-12-01 | 0 | 2018-06-07 | - | - | - |
+| 4 | 猪肉 | 粽子的团圆 | 4 | 534765902 | 李六 | 1 | 北京大学 | 2018-06-07 | 2022-12-01 | 0 | 2018-06-07 | - | - | - |
+| 5 | 面条 | 春天的幸福 | 5 | 345678901 | 张二 | 1 | 北京大学 | 2018-06-07 | 2022-12-01 | 0 | 2018-06-07 | - | - | - |
+            </textarea>
+        <div id="output" class="markdown-body"></div>
+    </div>
+</div>
+
+<!-- 引入Markdown解析库 -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    // 配置Markdown解析器
+    marked.setOptions({
+        breaks: true,    // 自动换行
+        gfm: true       // 启用GitHub风格
+    });
+
+    function renderMarkdown() {
+        const input = document.getElementById('input').value;
+        const output = document.getElementById('output');
+        output.innerHTML = marked.parse(input);
+    }
+
+    // 初始化渲染
+    renderMarkdown();
+</script>
+</body>
+</html>

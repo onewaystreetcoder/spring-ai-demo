@@ -12,9 +12,8 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.document.Document;
-import org.springframework.ai.ollama.OllamaChatModel;
-import org.springframework.ai.ollama.api.OllamaApi;
-import org.springframework.ai.ollama.api.OllamaOptions;
+import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
@@ -30,16 +29,23 @@ import java.util.Map;
 @Controller
 public class ChatController {
     public static final Logger logger = LoggerFactory.getLogger(EmbeddingController.class);
-    private final OllamaChatModel chatModel;
-    private final OllamaApi ollamaApi;
+    private final OpenAiChatModel chatModel;
     private final EmbeddingService embeddingService;
+    //    private final OllamaChatModel chatModel;
+//    private final OllamaApi ollamaApi;
     @Value("${systemPrompt}")
     private String systemPrompt_;
 
+//    @Autowired
+//    public ChatController(OllamaChatModel chatModel, OllamaApi ollamaApi, EmbeddingService embeddingService) {
+//        this.chatModel = chatModel;
+//        this.ollamaApi = ollamaApi;
+//        this.embeddingService = embeddingService;
+//    }
+
     @Autowired
-    public ChatController(OllamaChatModel chatModel, OllamaApi ollamaApi, EmbeddingService embeddingService) {
+    public ChatController(OpenAiChatModel chatModel, EmbeddingService embeddingService) {
         this.chatModel = chatModel;
-        this.ollamaApi = ollamaApi;
         this.embeddingService = embeddingService;
     }
 
@@ -62,27 +68,27 @@ public class ChatController {
     public Map<String,String> toolChat(@RequestParam(value = "message", defaultValue = "Tell me a joke") String message) {
 
         UserMessage userMessage = new UserMessage(message);
-        ChatResponse response = this.chatModel.call(new Prompt(userMessage, OllamaOptions.builder()
+        ChatResponse response = this.chatModel.call(new Prompt(userMessage, OpenAiChatOptions.builder()
                 .toolNames("getSqlResultTool").build()));
         return Map.of("generation", response.getResult().getOutput().getText());
     }
 
-    @PostMapping("/tool_chat2")
-    @ResponseBody
-    public Map<String,String> toolChat2(@RequestParam(value = "message", defaultValue = "Tell me a joke") String message) {
-        OllamaApi.ChatRequest ollamaRequest = OllamaApi.ChatRequest.builder(chatModel.getDefaultOptions().getModel())
-                .messages(List.of(
-                        OllamaApi.Message.builder(OllamaApi.Message.Role.SYSTEM)
-                                .content("You are a helpful assistant.").build(),
-                        OllamaApi.Message.builder(OllamaApi.Message.Role.USER)
-                                .content(message).build()
-                        ))
-                .tools(List.of(new OllamaApi.ChatRequest.Tool(new OllamaApi.ChatRequest.Tool.Function("Execute SQL to return query results", "getSqlResult", "{\"sql\": \"string\"}"))))
-                .build();
-        OllamaApi.ChatResponse response = ollamaApi.chat(ollamaRequest);
-
-        return Map.of("generation", response.message().content());
-    }
+//    @PostMapping("/tool_chat2")
+//    @ResponseBody
+//    public Map<String,String> toolChat2(@RequestParam(value = "message", defaultValue = "Tell me a joke") String message) {
+//        OllamaApi.ChatRequest ollamaRequest = OllamaApi.ChatRequest.builder(chatModel.getDefaultOptions().getModel())
+//                .messages(List.of(
+//                        OllamaApi.Message.builder(OllamaApi.Message.Role.SYSTEM)
+//                                .content("You are a helpful assistant.").build(),
+//                        OllamaApi.Message.builder(OllamaApi.Message.Role.USER)
+//                                .content(message).build()
+//                        ))
+//                .tools(List.of(new OllamaApi.ChatRequest.Tool(new OllamaApi.ChatRequest.Tool.Function("Execute SQL to return query results", "getSqlResult", "{\"sql\": \"string\"}"))))
+//                .build();
+//        OllamaApi.ChatResponse response = ollamaApi.chat(ollamaRequest);
+//
+//        return Map.of("generation", response.message().content());
+//    }
 
     @PostMapping("/tool_chat4")
     @ResponseBody
@@ -116,7 +122,7 @@ public class ChatController {
         messages.add(systemMessage);
         messages.add(userMessage);
 
-        Prompt prompt = new Prompt(messages, OllamaOptions.builder().toolNames("getSqlResult").build());
+        Prompt prompt = new Prompt(messages, OpenAiChatOptions.builder().toolNames("getSqlResult").build());
 
         ChatResponse response = this.chatModel.call(prompt);
         String text = response.getResult().getOutput().getText();
@@ -154,7 +160,7 @@ public class ChatController {
         messages.add(systemMessage);
         messages.add(userMessage);
 
-        Prompt prompt = new Prompt(messages, OllamaOptions.builder().toolNames("getSqlResult").build());
+        Prompt prompt = new Prompt(messages, OpenAiChatOptions.builder().toolNames("getSqlResult").build());
 
         ChatResponse response = this.chatModel.call(prompt);
         String text = response.getResult().getOutput().getText();

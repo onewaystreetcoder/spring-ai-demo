@@ -5,14 +5,28 @@ spring:
     allow-bean-definition-overriding: true
     banner-mode: off
   ai:
-    ollama:
-      base-url: http://localhost:11434
+    openai:
+      api-key: xxxx
       chat:
         options:
-          model: qwen2.5:0.5b
+          model: qwen/qwen2.5-3B-Instruct
+        api-key: xxxx
+        base-url: http://100.0.14.196:8088
       embedding:
+        api-key: xxxx
+        base-url: http://100.0.14.196:8088
         options:
           model: all-minilm:33m
+
+
+#    ollama:
+#      base-url: http://localhost:11434
+#      chat:
+#        options:
+#          model: qwen2.5:0.5b
+#      embedding:
+#        options:
+#          model: all-minilm:33m
 #          model: bge-m3
     vectorstore:
       chroma:
