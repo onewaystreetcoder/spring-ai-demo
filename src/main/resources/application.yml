@@ -19,14 +19,14 @@ spring:
           model: all-minilm:33m
 
 
-#    ollama:
-#      base-url: http://localhost:11434
-#      chat:
-#        options:
-#          model: qwen2.5:0.5b
-#      embedding:
-#        options:
-#          model: all-minilm:33m
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        options:
+          model: qwen2.5:0.5b
+      embedding:
+        options:
+          model: all-minilm:33m
 #          model: bge-m3
     vectorstore:
       chroma:

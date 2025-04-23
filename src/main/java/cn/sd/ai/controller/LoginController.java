@@ -1,10 +1,7 @@
 package cn.sd.ai.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
-import cn.hutool.captcha.CircleCaptcha;
 import cn.hutool.core.collection.ListUtil;
-import cn.hutool.core.io.IoUtil;
-import cn.hutool.extra.servlet.JakartaServletUtil;
 import cn.sd.ai.common.AjaxResult;
 import cn.sd.ai.entity.SysUser;
 import cn.sd.ai.utils.CaptchaUtil;
@@ -14,10 +11,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @Controller

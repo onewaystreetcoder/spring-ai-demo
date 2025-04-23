@@ -32,4 +32,5 @@ public class ToolCallingConfig {
                 .description("Put the text to upper case")
                 .build();
     }
+
 }

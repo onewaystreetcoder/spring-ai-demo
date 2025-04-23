@@ -9,11 +9,11 @@ import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.document.Document;
-import org.springframework.ai.openai.OpenAiChatModel;
-import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.ai.model.tool.ToolCallingChatOptions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
@@ -29,22 +29,14 @@ import java.util.Map;
 @Controller
 public class ChatController {
     public static final Logger logger = LoggerFactory.getLogger(EmbeddingController.class);
-    private final OpenAiChatModel chatModel;
+    private final ChatModel chatModel;
     private final EmbeddingService embeddingService;
-    //    private final OllamaChatModel chatModel;
-//    private final OllamaApi ollamaApi;
     @Value("${systemPrompt}")
     private String systemPrompt_;
 
-//    @Autowired
-//    public ChatController(OllamaChatModel chatModel, OllamaApi ollamaApi, EmbeddingService embeddingService) {
-//        this.chatModel = chatModel;
-//        this.ollamaApi = ollamaApi;
-//        this.embeddingService = embeddingService;
-//    }
 
     @Autowired
-    public ChatController(OpenAiChatModel chatModel, EmbeddingService embeddingService) {
+    public ChatController(ChatModel chatModel, EmbeddingService embeddingService) {
         this.chatModel = chatModel;
         this.embeddingService = embeddingService;
     }
@@ -68,7 +60,7 @@ public class ChatController {
     public Map<String,String> toolChat(@RequestParam(value = "message", defaultValue = "Tell me a joke") String message) {
 
         UserMessage userMessage = new UserMessage(message);
-        ChatResponse response = this.chatModel.call(new Prompt(userMessage, OpenAiChatOptions.builder()
+        ChatResponse response = this.chatModel.call(new Prompt(userMessage, ToolCallingChatOptions.builder()
                 .toolNames("getSqlResultTool").build()));
         return Map.of("generation", response.getResult().getOutput().getText());
     }
@@ -122,7 +114,7 @@ public class ChatController {
         messages.add(systemMessage);
         messages.add(userMessage);
 
-        Prompt prompt = new Prompt(messages, OpenAiChatOptions.builder().toolNames("getSqlResult").build());
+        Prompt prompt = new Prompt(messages, ToolCallingChatOptions.builder().toolNames("getSqlResult").build());
 
         ChatResponse response = this.chatModel.call(prompt);
         String text = response.getResult().getOutput().getText();
@@ -160,7 +152,7 @@ public class ChatController {
         messages.add(systemMessage);
         messages.add(userMessage);
 
-        Prompt prompt = new Prompt(messages, OpenAiChatOptions.builder().toolNames("getSqlResult").build());
+        Prompt prompt = new Prompt(messages, ToolCallingChatOptions.builder().toolNames("getSqlResult").build());
 
         ChatResponse response = this.chatModel.call(prompt);
         String text = response.getResult().getOutput().getText();
