@@ -17,7 +17,9 @@ public class WeatherService {
 		list.add("气温范围：5°C~25°C，以晴天为主，偶有阴雨\n 穿搭建议：晴天：短袖衬衫/长袖T恤 + 薄外套（如牛仔外套）\n 阴雨天：厚卫衣/毛衣 + 大衣，怕冷可搭配薄羽绒服\n 其他：运动鞋优先，雨天注意防风保暖");
 		list.add("气温范围：18°C~25°C，紫外线强，昼夜温差\n 穿搭建议：短袖/薄长袖 + 防晒衣，搭配运动鞋/休闲鞋");
 		list.add("气温范围：15°C~20°C（白天），夜间可降至5°C\n 穿搭建议：长袖T恤/薄卫衣 + 防风外套（如软壳衣），备雨具");
-		return city + list.get(new Random().nextInt(list.size()));
+		String s = list.get(new Random().nextInt(list.size()));
+		System.out.println(s);
+		return city + s;
 	}
 
 	public static void main(String[] args) {

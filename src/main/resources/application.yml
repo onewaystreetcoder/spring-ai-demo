@@ -11,10 +11,10 @@ spring:
         options:
           model: qwen/qwen2.5-3B-Instruct
         api-key: xxxx
-        base-url: http://100.0.14.196:8088
+        base-url: http://172.20.10.13:8000
       embedding:
         api-key: xxxx
-        base-url: http://100.0.14.196:8088
+        base-url: http://100.0.14.196:8000
         options:
           model: all-minilm:33m
 

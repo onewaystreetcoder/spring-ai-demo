@@ -6,6 +6,10 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import cn.sd.ai.utils.MarkdownTableUtil;
 import jakarta.annotation.Resource;
+import net.sf.jsqlparser.JSQLParserException;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.statement.Statement;
+import net.sf.jsqlparser.statement.select.Select;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.tool.annotation.Tool;
@@ -37,6 +41,23 @@ public class DbInvokeService {
         List<Map<String, Object>> maps = new ArrayList<>();
         if (StrUtil.isBlank(sql)) {
             result.put("message", "sql can't null");
+            result.put("code", "500");
+            return result;
+        }
+        try {
+            Statement statement = CCJSqlParserUtil.parse(sql);
+            if (statement == null) {
+                result.put("message", "sql type analyzer fail");
+                result.put("code", "500");
+                return result;
+            }
+            if(!(statement instanceof Select)){
+                result.put("message", "only exec dql");
+                result.put("code", "500");
+                return result;
+            }
+        } catch (JSQLParserException e) {
+            result.put("message", "sql type analyzer fail");
             result.put("code", "500");
             return result;
         }

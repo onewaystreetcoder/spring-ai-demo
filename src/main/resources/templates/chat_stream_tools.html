@@ -165,13 +165,6 @@
         document.getElementById('user-input').value = '';
         document.getElementById('user-input').rows = 1;
 
-        // 显示Loading提示
-        var loadingIndex = layer.msg('正在思考...', {
-          icon: 16,
-          shade: 0.3,
-          time: 0 // 不自动关闭
-        });
-
         // 获取复选框和分数输入框的值
         var checkboxValue = document.getElementById('checkbox-option').checked;
         var scoreValue = parseFloat(document.getElementById('score-input').value) || 0;
@@ -182,7 +175,7 @@
         }
 
         // 使用AJAX发送用户输入内容到/chat接口，以表单形式提交
-        fetch('/tool_chat6', {
+        fetch('/tool_chat5', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
@@ -193,77 +186,49 @@
             score: scoreValue
           })
         })
-        .then(response => response.json())
-        .then(data => {
-          // 关闭Loading提示
-          layer.close(loadingIndex);
-
-          // 处理接口返回的 Markdown 数据，将 \n 替换为 <br>
-          var processedMarkdown = data.generation.replace(/\\n/g, '\n');
-
-          // 使用 marked 解析 Markdown 内容
-          var aiMessage = marked.parse(processedMarkdown);
-
-          // 处理代码块和表格部分，添加复制按钮
-          var tempDiv = document.createElement('div');
-          tempDiv.innerHTML = aiMessage;
-
-          // 处理代码块
-          var codeBlocks = tempDiv.querySelectorAll('pre > code');
-          codeBlocks.forEach(function(codeBlock) {
-            // 修复代码块内容获取逻辑
-            var codeContent = codeBlock.innerText || codeBlock.textContent;
-            if (!codeContent) {
-              console.error('代码块内容为空，无法复制');
-              return;
-            }
-
-            var copyBtn = document.createElement('button');
-            copyBtn.className = 'copy-btn';
-            copyBtn.textContent = '复制';
-            copyBtn.title = '复制代码';
-            copyBtn.setAttribute('data-clipboard-text', codeContent);
-            new ClipboardJS(copyBtn);
-            copyBtn.addEventListener('success', function() {
-              layer.msg('复制成功');
-            });
-            copyBtn.addEventListener('error', function() {
-              layer.msg('复制失败，请检查浏览器权限');
-            });
-            codeBlock.parentNode.insertBefore(copyBtn, codeBlock);
-          });
-
-
-
-
-          // 处理表格
-          var tables = tempDiv.querySelectorAll('table');
-          tables.forEach(function(table) {
-            var tableText = table.innerText.replace(/\n/g, '<br>');
-            var copyBtn = document.createElement('button');
-            copyBtn.className = 'copy-btn';
-            copyBtn.textContent = '复制';
-            copyBtn.title = '复制表格';
-            copyBtn.setAttribute('data-clipboard-text', tableText);
-            table.parentNode.insertBefore(copyBtn, table);
-          });
-
-          // 将处理后的 HTML 插入到聊天容器中
-          var aiMessageElement = document.createElement('div');
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.body.getReader(); // 获取流式响应
+        })
+        .then(reader => {
+          const decoder = new TextDecoder();
+          let result = '';
+          let aiMessageElement = document.createElement('div');
           aiMessageElement.className = 'message ai-message-container';
           aiMessageElement.innerHTML = `
             <img src="/static/img/AI.png" class="avatar" alt="AI Avatar">
-            <div class="ai-message">${tempDiv.innerHTML}</div>
+            <div class="ai-message"></div>
           `;
-
           chatContainer.appendChild(aiMessageElement);
           chatContainer.scrollTop = chatContainer.scrollHeight;
+
+          function read() {
+            reader.read().then(({ done, value }) => {
+              if (done) {
+                return;
+              }
+              result += decoder.decode(value, { stream: true });
+              try {
+                const parsedData = JSON.parse(result);
+                updateChatContainer(aiMessageElement.querySelector('.ai-message'), parsedData.generation); // 更新聊天容器
+              } catch (e) {
+                // 忽略解析错误，继续读取
+              }
+              read(); // 继续读取
+            });
+          }
+          read();
         })
         .catch(error => {
-          // 关闭Loading提示
-          layer.close(loadingIndex);
           layer.msg('请求失败，请稍后再试');
         });
+      }
+
+      function updateChatContainer(container, content) {
+        container.textContent += content;
+        container.scrollTop = container.scrollHeight;
       }
 
       // 使用jquery动态绑定复制按钮click事件

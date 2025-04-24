@@ -42,7 +42,7 @@ public class LoginController {
         Map<String, Object> map = new HashMap<>();
         Map<String, Object> userInfo = new HashMap<>();
         userInfo.put("deptName", "数字化部");
-        userInfo.put("username", "张三");
+        userInfo.put("username", "超级管理员");
         map.put("userInfo", userInfo);
 
         map.put("menus", ListUtil.empty());

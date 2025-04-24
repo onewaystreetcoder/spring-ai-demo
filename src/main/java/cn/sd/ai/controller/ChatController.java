@@ -2,9 +2,12 @@ package cn.sd.ai.controller;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.sd.ai.service.DbInvokeService;
 import cn.sd.ai.service.EmbeddingService;
+import jakarta.annotation.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
@@ -12,10 +15,15 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.ai.chat.prompt.SystemPromptTemplate;
+import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.model.tool.ToolCallingChatOptions;
+import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -33,6 +41,8 @@ public class ChatController {
     private final EmbeddingService embeddingService;
     @Value("${systemPrompt}")
     private String systemPrompt_;
+    @Resource
+    private DbInvokeService dbInvokeService;
 
 
     @Autowired
@@ -129,7 +139,7 @@ public class ChatController {
                                         @RequestParam(value = "usingKnowledge", defaultValue = "false") String usingKnowledge,
                                         @RequestParam(value = "score", defaultValue = "0.5") double score
     ) {
-        String systemMessageStr = "你是一位公司数据库专家，对公司数据表很熟悉，能够快速准确的根据问题写出对应SQL,要求所生成的SQL表名、字段要在给出的表结构中，并调用工具getSqlResultTool获取结果,将结果整理整markdown格式展示";
+        String systemMessageStr = "你是一位公司数据库专家，对公司数据表很熟悉，能够快速准确的根据问题写出对应SQL,要求所生成的SQL表名、字段要在给出的表结构中，并调用工具getSqlResultTool获取结果,将结果整理整代码格式展示";
 
         if ("true".equals(usingKnowledge)) {
             List<Document> documents = embeddingService.searchDocument(message);
@@ -152,7 +162,10 @@ public class ChatController {
         messages.add(systemMessage);
         messages.add(userMessage);
 
-        Prompt prompt = new Prompt(messages, ToolCallingChatOptions.builder().toolNames("getSqlResult").build());
+        Prompt prompt = new Prompt(messages, ToolCallingChatOptions.builder()
+                .toolNames("getSqlResult")
+                .temperature(0.4)
+                .build());
 
         ChatResponse response = this.chatModel.call(prompt);
         String text = response.getResult().getOutput().getText();
@@ -160,4 +173,138 @@ public class ChatController {
 
         return Map.of("generation", StrUtil.removeSuffix(StrUtil.removePrefix(text,"\""), "\""));
     }
+
+    @PostMapping(value ="/tool_chat5", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @ResponseBody
+    public Flux<ChatResponse> toolStreamChat4(@RequestParam(value = "message", defaultValue = "Tell me a joke") String message,
+                                        @RequestParam(value = "usingKnowledge", defaultValue = "false") String usingKnowledge,
+                                        @RequestParam(value = "score", defaultValue = "0.5") double score
+    ) {
+        String systemMessageStr = "你是一位公司数据库专家，对公司数据表很熟悉，能够快速准确的根据问题写出对应SQL,要求所生成的SQL表名、字段要在给出的表结构中，并调用工具getSqlResultTool获取结果,将结果整理整代码格式展示";
+
+        if ("true".equals(usingKnowledge)) {
+            List<Document> documents = embeddingService.searchDocument(message);
+            if (CollUtil.isNotEmpty(documents)) {
+                Document document = documents.get(0);
+                String schemas = (String)document.getMetadata().get("schemas");
+                if (StrUtil.isNotEmpty(schemas) && null != document.getScore() && document.getScore() > score){
+                    //将schemas添加到messages中时不调用工具，不知道为啥
+                    AssistantMessage assistantMessage = new AssistantMessage(schemas);
+//                messages.add(assistantMessage);
+                    systemMessageStr = systemMessageStr + "\n\n" + schemas;
+                }
+            }
+        }
+
+
+        SystemMessage systemMessage = new SystemMessage(systemMessageStr);
+        UserMessage userMessage = new UserMessage(message);
+        List<Message> messages = new ArrayList<>();
+        messages.add(systemMessage);
+        messages.add(userMessage);
+
+        Prompt prompt = new Prompt(messages, ToolCallingChatOptions.builder()
+                .toolNames("getSqlResult")
+                .temperature(0.4)
+                .build());
+
+        ChatResponse call = this.chatModel.call(prompt);
+
+        // 增加日志记录逻辑
+        System.out.println(call.getResult().getOutput().getText());
+        return null;
+    }
+
+
+    @PostMapping("/tool_chat6")
+    @ResponseBody
+    public Map<String,String> toolChat6(@RequestParam(value = "message", defaultValue = "Tell me a joke") String message,
+                                        @RequestParam(value = "usingKnowledge", defaultValue = "false") String usingKnowledge,
+                                        @RequestParam(value = "score", defaultValue = "0.5") double score
+    ) {
+        String systemMessageStr = "你是一位公司数据库专家，对公司数据表很熟悉，能够快速准确的根据问题写出对应SQL,要求所生成的SQL表名、字段要在给出的表结构中，并调用工具getSqlResultTool获取结果,将结果整理整代码格式展示";
+
+        if ("true".equals(usingKnowledge)) {
+            List<Document> documents = embeddingService.searchDocument(message);
+            if (CollUtil.isNotEmpty(documents)) {
+                Document document = documents.get(0);
+                String schemas = (String)document.getMetadata().get("schemas");
+                if (StrUtil.isNotEmpty(schemas) && null != document.getScore() && document.getScore() > score){
+                    //将schemas添加到messages中时不调用工具，不知道为啥
+                    AssistantMessage assistantMessage = new AssistantMessage(schemas);
+//                messages.add(assistantMessage);
+                    systemMessageStr = systemMessageStr + "\n\n" + schemas;
+                }
+            }
+        }
+
+
+        SystemMessage systemMessage = new SystemMessage(systemMessageStr);
+        UserMessage userMessage = new UserMessage(message);
+        List<Message> messages = new ArrayList<>();
+        messages.add(systemMessage);
+        messages.add(userMessage);
+        Prompt prompt = new Prompt(messages);
+        ChatResponse response = this.chatModel.call(prompt);
+        String text = response.getResult().getOutput().getText();
+        if (StrUtil.isNotBlank(text)) {
+            try {
+                text = dbInvokeService.getSqlResult(StrUtil.removeSuffix(StrUtil.removePrefix(text,"```sql"), "```"));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        logger.info("toolChat6 response: {}", text);
+        ChatClient.create(chatModel).prompt().system(systemMessageStr);
+        return Map.of("generation", StrUtil.removeSuffix(StrUtil.removePrefix(text,"\""), "\""));
+    }
+
+
+    @PostMapping("/tool_chat7")
+    @ResponseBody
+    public Map<String,String> toolChat(@RequestParam(value = "message", defaultValue = "Tell me a joke") String message,
+                                       @RequestParam(value = "usingKnowledge", defaultValue = "false") String usingKnowledge,
+                                       @RequestParam(value = "score", defaultValue = "0.5") double score
+    ) {
+        String systemMessageStr = "你是一位公司数据库专家，对公司数据表很熟悉，能够快速准确的根据问题写出对应SQL,要求所生成的SQL表名、字段要在给出的表结构中，并调用工具getSqlResultTool获取结果,将结果整理整代码格式展示";
+
+        if ("true".equals(usingKnowledge)) {
+            List<Document> documents = embeddingService.searchDocument(message);
+            if (CollUtil.isNotEmpty(documents)) {
+                Document document = documents.get(0);
+                String schemas = (String)document.getMetadata().get("schemas");
+                if (StrUtil.isNotEmpty(schemas) && null != document.getScore() && document.getScore() > score){
+                    systemMessageStr = systemMessageStr + "\n\n" + schemas;
+                }
+            }
+        }
+        BeanOutputConverter<GenerationSql> beanOutputConverter = new BeanOutputConverter<>(GenerationSql.class);
+        String format = beanOutputConverter.getFormat();
+        String template = """
+                Generate sql
+                {format}
+                """;
+        PromptTemplate promptTemplate = new PromptTemplate(template, Map.of( "format", format));
+        Prompt prompt = new Prompt(promptTemplate.createMessage());
+        ChatClient.CallResponseSpec call = ChatClient.create(chatModel).
+                prompt(prompt).system(systemMessageStr).user(message).call();
+        String text = "";
+        try {
+            GenerationSql convert = beanOutputConverter.convert(call.chatResponse().getResult().getOutput().getText());
+            if (StrUtil.isNotBlank(convert.sql())) {
+                try {
+                    text = dbInvokeService.getSqlResult(convert.sql());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return Map.of("generation", StrUtil.removeSuffix(StrUtil.removePrefix(text,"\""), "\""));
+    }
+
+    record GenerationSql(String sql) {
+    }
+
 }
